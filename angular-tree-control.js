@@ -41,6 +41,7 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                     expandedNodes: "=?",
                     onSelection: "&",
                     onNodeToggle: "&",
+                    onDblClick: "&",
                     options: "=?",
                     orderBy: "@",
                     reverseOrder: "@",
@@ -73,7 +74,7 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                         return dst || src;
                     }
                     function defaultEquality(a, b) {
-                        if (!a || !b )
+                        if (a === undefined || b === undefined)
                             return false;
                         a = shallowCopy(a);
                         a[$scope.options.nodeChildren] = [];
@@ -225,6 +226,40 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                         }
                     };
 
+                    $scope.doubleClick = function(selectedNode) {
+                            var transcludedScope = this;
+                            if(!$scope.options.isLeaf(selectedNode) && (!$scope.options.dirSelectable || !$scope.options.isSelectable(selectedNode))) {
+                                // Branch node is not selectable, expand
+                                this.selectNodeHead();
+                            }
+                            else if($scope.options.isLeaf(selectedNode) && (!$scope.options.isSelectable(selectedNode))) {
+                                // Leaf node is not selectable
+                                return;
+                            }
+                            else {
+                                var selected = false;
+                                if (!$scope.options.equality(selectedNode, $scope.selectedNode)) {
+                                    $scope.selectedNode = selectedNode;
+                                    selected = true;
+                                }
+                                else {
+                                    if ($scope.options.allowDeselect) {
+                                        $scope.selectedNode = undefined;
+                                    } else {
+                                        $scope.selectedNode = selectedNode;
+                                        selected = true;
+                                    }
+                                }
+                            }
+
+                            if ($scope.onDblClick) {
+                                var parentNode = (transcludedScope.$parent.node === transcludedScope.synteticRoot)?null:transcludedScope.$parent.node;
+                                $scope.onDblClick({node: selectedNode, selected: selected, $parentNode: parentNode,
+                                  $index: transcludedScope.$index, $first: transcludedScope.$first, $middle: transcludedScope.$middle,
+                                  $last: transcludedScope.$last, $odd: transcludedScope.$odd, $even: transcludedScope.$even});
+                            }
+                    }
+
                     $scope.selectedClass = function() {
                         var isThisNodeSelected = isSelectedNode(this.node);
                         var labelSelectionClass = classIfDefined($scope.options.injectClasses.labelSelected, false);
@@ -273,7 +308,7 @@ if (typeof module !== "undefined" && typeof exports !== "undefined" && module.ex
                             'set-node-to-data>' +
                             '<i class="tree-branch-head" ng-class="iBranchClass()" ng-click="selectNodeHead(node)"></i>' +
                             '<i class="tree-leaf-head {{options.iLeafClass}}"></i>' +
-                            '<div class="tree-label {{options.labelClass}}" ng-class="[selectedClass(), unselectableClass()]" ng-click="selectNodeLabel(node)" tree-transclude></div>' +
+                            '<div class="tree-label {{options.labelClass}}" ng-class="[selectedClass(), unselectableClass()]" ng-dblclick="doubleClick(node)" ng-click="selectNodeLabel(node)" tree-transclude></div>' +
                             '<treeitem ng-if="nodeExpanded()"></treeitem>' +
                             '</li>' +
                             '</ul>';
